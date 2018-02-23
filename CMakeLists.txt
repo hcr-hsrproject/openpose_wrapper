@@ -14,7 +14,9 @@ find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   sensor_msgs
   image_transport
+  openpose_ros_msgs
 )
+
 find_package(GFlags REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenPose REQUIRED)

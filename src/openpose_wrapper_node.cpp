@@ -37,13 +37,18 @@
 #include <array>
 #include <openpose_wrapper/OpenPose.h>
 #include <std_msgs/Float32MultiArray.h>
+#include <sensor_msgs/Image.h>
+#include <openpose_ros_msgs/GetPersons.h>
 
 cv_bridge::CvImagePtr cv_ptr;
+cv_bridge::CvImagePtr cv_ptr_output;
+cv_bridge::CvImage out_msg;
 class MyPublisher
 {
 	public:
 	MyPublisher(void);
 	ros::Publisher publisher;
+	ros::Publisher image_skeleton_pub;
 	void callback(const op::Array<float>&);
 	std_msgs::Float32MultiArray msg;
 };
@@ -399,6 +404,7 @@ public:
 
                 // Display rendered output image
                 cv::imshow("User worker GUI", datumsPtr->at(0).cvOutputData);
+                out_msg.image=datumsPtr->at(0).cvOutputData;
                 // Display image and sleeps at least 1 ms (it usually sleeps ~5-10 msec to display the image)
                 const char key = (char)cv::waitKey(1);
 				_count++;
@@ -545,10 +551,18 @@ int openPoseTutorialWrapper2()
 
 void callback(const sensor_msgs::Image &img)
 {
+    ROS_INFO("hello");
 	try
 	{
 		cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::BGR8);
-//		cv_ptr = cv::imdecode(cv::Mat(img->data),1);/
+		//cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::BGR8);
+        //general image
+        //sensor_msgs::Image ros_image;
+        //ros_image = *(cv_ptr->toImageMsg());
+        //mp.image_skeleton_pub.publish(ros_image);
+
+        //ros_image= cv::imdecode(cv::Mat(img->data),1);
+
 	}
 	catch (cv_bridge::Exception& e)
 	{
@@ -619,8 +633,12 @@ void MyPublisher::callback(const op::Array<float> &poseKeypoints)
 //		msg.humans.push_back(human);
 	}
 //	msg.numHuman = msg.humans.size();
-
 	publisher.publish(mp.msg);
+
+    //publish image
+    sensor_msgs::Image ros_image;
+    out_msg.encoding =sensor_msgs::image_encodings::RGB8;
+    image_skeleton_pub.publish(out_msg.toImageMsg());
 }
 
 int main(int argc, char *argv[])
@@ -632,8 +650,11 @@ int main(int argc, char *argv[])
 
 	ros::start();
 //	mp.publisher = nh.advertise<openpose_wrapper::OpenPose>("openpose_human_body", 1000);
+//	
 	mp.publisher = nh.advertise<std_msgs::Float32MultiArray>("openpose_human_body", 1000);
+    mp.image_skeleton_pub = nh.advertise<sensor_msgs::Image>( "/openpose_ros/detected_poses_image", 1 );  
 	ros::Subscriber subscriber = nh.subscribe( FLAGS_image_dir, 1, callback);
+	//ros::Subscriber subscriber = nh.subscribe( FLAGS_image_dir, 1, callback);
 	cout << "Subscribed" << endl;
 
 
