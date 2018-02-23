@@ -19,8 +19,12 @@ buf_mutex	src/openpose_wrapper_node.cpp	/^pthread_mutex_t buf_mutex = PTHREAD_MU
 buff_empty	src/openpose_wrapper_node.cpp	/^bool buff_empty = true;$/;"	v
 callback	src/openpose_wrapper_node.cpp	/^void MyPublisher::callback(const op::Array<float> &poseKeypoints)$/;"	f	class:MyPublisher
 callback	src/openpose_wrapper_node.cpp	/^void callback(const sensor_msgs::Image &img)$/;"	f
+cvMatToOpInput	src/openpose_wrapper_node.cpp	/^op::CvMatToOpInput *cvMatToOpInput;$/;"	v
+cvMatToOpOutput	src/openpose_wrapper_node.cpp	/^op::CvMatToOpOutput *cvMatToOpOutput;$/;"	v
 cv_ptr	src/openpose_wrapper_node.cpp	/^cv_bridge::CvImagePtr cv_ptr;$/;"	v
-cv_ptr_output	src/openpose_wrapper_node.cpp	/^cv_bridge::CvImagePtr cv_ptr_output;$/;"	v
+faceDetector	src/openpose_wrapper_node.cpp	/^op::FaceDetector *faceDetector;$/;"	v
+faceExtractor	src/openpose_wrapper_node.cpp	/^op::FaceExtractor *faceExtractor;$/;"	v
+faceRenderer	src/openpose_wrapper_node.cpp	/^op::FaceRenderer *faceRenderer;$/;"	v
 image_skeleton_pub	src/openpose_wrapper_node.cpp	/^	ros::Publisher image_skeleton_pub;$/;"	m	class:MyPublisher	file:
 index	src/openpose_wrapper_node.cpp	/^	int index;$/;"	m	struct:UserDatum	file:
 initializationOnThread	src/openpose_wrapper_node.cpp	/^    void initializationOnThread() {}$/;"	f	class:WUserInput
@@ -31,8 +35,12 @@ mImageFiles	src/openpose_wrapper_node.cpp	/^    const std::vector<std::string> m
 main	src/openpose_wrapper_node.cpp	/^int main(int argc, char *argv[])$/;"	f
 mp	src/openpose_wrapper_node.cpp	/^MyPublisher mp;$/;"	v
 msg	src/openpose_wrapper_node.cpp	/^	std_msgs::Float32MultiArray msg;$/;"	m	class:MyPublisher	file:
+opOutputToCvMat	src/openpose_wrapper_node.cpp	/^op::OpOutputToCvMat *opOutputToCvMat;$/;"	v
 openPoseTutorialWrapper2	src/openpose_wrapper_node.cpp	/^int openPoseTutorialWrapper2()$/;"	f
 out_msg	src/openpose_wrapper_node.cpp	/^cv_bridge::CvImage out_msg;$/;"	v
+poseExtractorCaffe	src/openpose_wrapper_node.cpp	/^op::PoseExtractorCaffe *poseExtractorCaffe;$/;"	v
+poseRenderer	src/openpose_wrapper_node.cpp	/^op::PoseRenderer *poseRenderer;$/;"	v
+pose_pub	src/openpose_wrapper_node.cpp	/^	ros::Publisher pose_pub;$/;"	m	class:MyPublisher	file:
 publisher	src/openpose_wrapper_node.cpp	/^	ros::Publisher publisher;$/;"	m	class:MyPublisher	file:
 work	src/openpose_wrapper_node.cpp	/^    void work(std::shared_ptr<std::vector<UserDatum>>& datumsPtr)$/;"	f	class:WUserPostProcessing
 workConsumer	src/openpose_wrapper_node.cpp	/^    void workConsumer(const std::shared_ptr<std::vector<UserDatum>>& datumsPtr)$/;"	f	class:WUserOutput

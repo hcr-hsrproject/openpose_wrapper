@@ -20,6 +20,7 @@
 #include <chrono> // `std::chrono::` functions and classes, e.g. std::chrono::milliseconds
 #include <thread> // std::this_thread
 #include <unistd.h>
+#include <string>
 // Other 3rdparty dependencies
 // GFlags: DEFINE_bool, _int32, _int64, _uint64, _double, _string
 #include <gflags/gflags.h>
@@ -38,17 +39,31 @@
 #include <openpose_wrapper/OpenPose.h>
 #include <std_msgs/Float32MultiArray.h>
 #include <sensor_msgs/Image.h>
-#include <openpose_ros_msgs/GetPersons.h>
+#include <openpose_ros_msgs/Persons.h>
+#include <openpose_ros_msgs/BodyPartDetection.h>
+#include <openpose_ros_msgs/PersonDetection.h>
+#include <image_transport/image_transport.h>
 
 cv_bridge::CvImagePtr cv_ptr;
-cv_bridge::CvImagePtr cv_ptr_output;
 cv_bridge::CvImage out_msg;
+
+//added from mk:ToDO
+op::CvMatToOpInput *cvMatToOpInput;
+op::CvMatToOpOutput *cvMatToOpOutput;
+op::PoseExtractorCaffe *poseExtractorCaffe;
+op::PoseRenderer *poseRenderer;
+op::FaceDetector *faceDetector;
+op::FaceExtractor *faceExtractor;
+op::FaceRenderer *faceRenderer;
+op::OpOutputToCvMat *opOutputToCvMat;
+
 class MyPublisher
 {
 	public:
 	MyPublisher(void);
 	ros::Publisher publisher;
 	ros::Publisher image_skeleton_pub;
+	ros::Publisher pose_pub;
 	void callback(const op::Array<float>&);
 	std_msgs::Float32MultiArray msg;
 };
@@ -403,7 +418,7 @@ public:
 				pthread_mutex_unlock(&buf_mutex);
 
                 // Display rendered output image
-                cv::imshow("User worker GUI", datumsPtr->at(0).cvOutputData);
+                //cv::imshow("User worker GUI", datumsPtr->at(2).cvOutputData);
                 out_msg.image=datumsPtr->at(0).cvOutputData;
                 // Display image and sleeps at least 1 ms (it usually sleeps ~5-10 msec to display the image)
                 const char key = (char)cv::waitKey(1);
@@ -551,17 +566,11 @@ int openPoseTutorialWrapper2()
 
 void callback(const sensor_msgs::Image &img)
 {
-    ROS_INFO("hello");
+    //ROS_INFO("hello");
 	try
 	{
 		cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::BGR8);
 		//cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::BGR8);
-        //general image
-        //sensor_msgs::Image ros_image;
-        //ros_image = *(cv_ptr->toImageMsg());
-        //mp.image_skeleton_pub.publish(ros_image);
-
-        //ros_image= cv::imdecode(cv::Mat(img->data),1);
 
 	}
 	catch (cv_bridge::Exception& e)
@@ -569,6 +578,26 @@ void callback(const sensor_msgs::Image &img)
 		ROS_ERROR("cv_bridge exception: %s", e.what());
 		return;
 	}
+
+
+    /*ToDo 
+    op::Array<float> netInputArray;
+    std::vector<float> scaleRatios;
+    op::Array<float> outputArray;
+
+    // process
+    std::tie(netInputArray, scaleRatios) = cvMatToOpInput->format(cv_ptr->image);
+    double scaleInputToOutput;
+    std::tie(scaleInputToOutput, outputArray) = cvMatToOpOutput->format(cv_ptr->image);
+    // Step 3 - Estimate poseKeypoints
+    poseExtractorCaffe->forwardPass(netInputArray, {cv_ptr->image.cols, cv_ptr->image.rows}, scaleRatios);
+    const auto poseKeypoints1 = poseExtractorCaffe->getPoseKeypoints();
+    const auto faces = faceDetector->detectFaces(poseKeypoints1, scaleInputToOutput);
+    faceExtractor->forwardPass(faces, cv_ptr->image, scaleInputToOutput);
+    const auto faceKeypoints = faceExtractor->getFaceKeypoints();
+    */
+
+
 
 //	cout << "New image " << img.width << "x" << img.height << " " << img.data.size() << endl;
 }
@@ -579,7 +608,33 @@ MyPublisher::MyPublisher(void)
 
 void MyPublisher::callback(const op::Array<float> &poseKeypoints)
 {
+    ros::Time t = ros::Time::now();
 //	openpose_wrapper::OpenPose msg;
+    openpose_ros_msgs::Persons persons;
+    persons.rostime = t;
+    persons.image_w = 640;
+    persons.image_h = 480;
+
+
+    const int num_people = poseKeypoints.getSize(0);
+    const int num_bodyparts = poseKeypoints.getSize(1);
+
+    for(size_t person_idx = 0; person_idx < num_people; person_idx++) {
+        openpose_ros_msgs::PersonDetection person;
+        for (size_t bodypart_idx = 0; bodypart_idx < num_bodyparts; bodypart_idx++) {
+            size_t final_idx = 3*(person_idx*num_bodyparts + bodypart_idx);
+            openpose_ros_msgs::BodyPartDetection bodypart;
+            bodypart.part_id = bodypart_idx;
+            bodypart.x = poseKeypoints[final_idx];
+            bodypart.y = poseKeypoints[final_idx+1];
+            bodypart.confidence = poseKeypoints[final_idx+2];
+            person.body_part.push_back(bodypart);
+        }
+        persons.persons.push_back(person);
+    }
+    pose_pub.publish(persons);
+
+
 	int numHuman = poseKeypoints.getSize(0);
 	int numPart  = poseKeypoints.getSize(1);
 	int numInfo  = poseKeypoints.getSize(2);
@@ -650,13 +705,12 @@ int main(int argc, char *argv[])
 
 	ros::start();
 //	mp.publisher = nh.advertise<openpose_wrapper::OpenPose>("openpose_human_body", 1000);
-//	
 	mp.publisher = nh.advertise<std_msgs::Float32MultiArray>("openpose_human_body", 1000);
     mp.image_skeleton_pub = nh.advertise<sensor_msgs::Image>( "/openpose_ros/detected_poses_image", 1 );  
+    mp.pose_pub = nh.advertise<openpose_ros_msgs::Persons>("/openpose/pose", 2);
 	ros::Subscriber subscriber = nh.subscribe( FLAGS_image_dir, 1, callback);
 	//ros::Subscriber subscriber = nh.subscribe( FLAGS_image_dir, 1, callback);
 	cout << "Subscribed" << endl;
-
 
     // Parsing command line flags
 
